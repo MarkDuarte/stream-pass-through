@@ -1,4 +1,4 @@
-import { Writable } from 'stream'
+import { PassThrough, Writable } from 'stream'
 import axios from 'axios'
 
 const API_01 = 'http://localhost:3000'
@@ -17,14 +17,28 @@ const request = await Promise.all([
   })
 ])
 
-const result = request.map(({ data }) => data)
+const results = request.map(({ data }) => data)
 
 const output = Writable({
   write(chunk, enc, callback) {
-    const data = chunk.toString()
-    console.log('data ', data)
+    const data = chunk.toString().replace(/\n/, '')
+    const name = data.match(/:"(?<name>.*)(?=-)/).groups.name
+    console.log(`[${name.toLowerCase()}] ${data}`)
     callback()
   }
 })
 
-result[0].pipe(output)
+function merge(streams) {
+  return streams.reduce((prev, current, index, items) => {
+    current.pipe(prev, { end: false })
+
+    current.on('end', () => items.every(s => s.ended) && prev.end())
+    return prev
+
+  }, new PassThrough())
+}
+
+merge(results).pipe(output)
+
+//result[0].pipe(output)
+//result[1].pipe(output)
