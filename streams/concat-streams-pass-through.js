@@ -30,8 +30,12 @@ const output = Writable({
 
 function merge(streams) {
   return streams.reduce((prev, current, index, items) => {
+    //impede  que a stream feche sozinha
     current.pipe(prev, { end: false })
 
+    // Como colocamos end: false, vamos manipular manualmente quando o nosso current
+    // terminar. Quando ele terminar, vamos verificar se todos os pipelines se encerraram
+    // ele vai então forçar a cadeia do anterior e se fechar
     current.on('end', () => items.every(s => s.ended) && prev.end())
     return prev
 
